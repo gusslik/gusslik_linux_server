@@ -4,12 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
-    int sfd, s;
+    int sfd, s, client_sfd;
     struct addrinfo hints;
     struct addrinfo *res, *addr;
+    char buf[64];
+
 
     if (argc < 2)
     {
@@ -26,7 +29,7 @@ int main(int argc, char *argv[])
     hints.ai_next = NULL;
 
     // Trying to get list of addresses which can be used for the server
-    s = getaddrinf(NULL, argv[1], &hints, &res);
+    s = getaddrinfo(NULL, argv[1], &hints, &res);
     if (s != 0)
     {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
@@ -48,11 +51,31 @@ int main(int argc, char *argv[])
     freeaddrinfo(res);
 
     if(addr == NULL){
-        fprintf(stderr, "Could not bind\n");
+        perror("bind");
         exit(EXIT_FAILURE);    
     }
 
+    if((listen(sfd, 8)) < 0){
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
     
+    printf("Server listening on port %s...\n", argv[1]);
+
+    if((client_sfd = accept(sfd, NULL, NULL)) < 0){
+        perror("accept");
+        exit(EXIT_FAILURE);
+    }
+    
+    if((read(client_sfd, buf, sizeof(buf))) < 0){
+        perror("read");
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("Message received: %s\n", buf);
+
+    close(sfd);
+    close(client_sfd);
 
     return 0;
 }
