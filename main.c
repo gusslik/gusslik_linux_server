@@ -8,10 +8,10 @@
 
 int main(int argc, char *argv[])
 {
-    int sfd, s, client_sfd;
+    int sfd, s, client_sfd, optval;
     struct addrinfo hints;
     struct addrinfo *res, *addr;
-    char buf[64];
+    char buf[2048];
 
 
     if (argc < 2)
@@ -35,12 +35,18 @@ int main(int argc, char *argv[])
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
         exit(EXIT_FAILURE);
     }
-
+    
     for (addr = res; addr != NULL; addr = addr->ai_next)
     {
         sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         if(sfd < 0)
             continue;
+
+        if((setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))) < 0){
+            perror("setsockopt");
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
 
         if((bind(sfd, addr->ai_addr, addr->ai_addrlen)) == 0)
             break;
