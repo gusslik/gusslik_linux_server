@@ -6,12 +6,21 @@
 #include <unistd.h>
 #include <string.h>
 
+typedef struct {
+    char method[16];
+    char uri[256];
+    char version[16];
+} HttpRequest;
+
+int parse_request(const char *request, HttpRequest *parsed_request);
+
 int main(int argc, char *argv[])
 {
     int sfd, s, client_sfd, optval;
     struct addrinfo hints;
     struct addrinfo *res, *addr;
     char buf[2048];
+    HttpRequest *parsed_request;
 
 
     if (argc < 2)
@@ -78,10 +87,34 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    printf("Message received: %s\n", buf);
+    parse_request(buf, parsed_request);
+    printf("\nParsed data: Method - %s, URI - %s, Version - %s\n", parsed_request->method, parsed_request->uri, parsed_request->version);
+
+    // Test response
+    char *response_message = "HTTP/1.1 200 OK";
+
+    if((write(client_sfd, response_message, sizeof(response_message))) < 0){
+        perror("write");
+        exit(EXIT_FAILURE);
+    }
 
     close(sfd);
     close(client_sfd);
 
     return 0;
+}
+
+// Parses only first line of the HTTP request yet
+int parse_request(const char *request, HttpRequest *parsed_request){
+    char first_line[256];
+    
+    int i = 0;
+    while(request[i] && request[i] != '\r' && i < sizeof(first_line) - 1){
+        first_line[i] = request[i];
+        i++;
+    }
+
+    first_line[i + 1] = '\0';
+
+    return sscanf(first_line, "%s %s %s", parsed_request->method, parsed_request->uri, parsed_request->version);
 }
